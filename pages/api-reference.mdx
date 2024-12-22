@@ -1,0 +1,221 @@
+# API Reference
+
+The `InstanceSerializer` class provides comprehensive methods for serializing and deserializing Roblox instances.
+
+## Core Methods
+
+### serializeInstance()
+
+**Signature:** `serializeInstance(instance: Instance): Promise<SerializedInstance>`
+
+Serializes an instance and all its descendants into a plain object structure.
+
+#### Parameters
+- `instance: Instance` - The instance to serialize
+
+#### Returns
+`Promise<SerializedInstance>` - A plain object representation of the instance and its hierarchy
+
+#### Example
+```typescript
+const model = new Instance("Model");
+const part = new Instance("Part", model);
+part.Position = new Vector3(0, 10, 0);
+
+const serializedData = await InstanceSerializer.serializeInstance(model);
+print(serializedData);
+```
+
+### deserializeInstance()
+
+**Signature:** `deserializeInstance(data: SerializedInstance): Promise<Instance>`
+
+Reconstructs a Roblox instance from a serialized object structure.
+
+#### Parameters
+- `data: SerializedInstance` - The serialized instance data
+
+#### Returns
+`Promise<Instance>` - The reconstructed instance with all properties and children
+
+#### Example
+```typescript
+const reconstructedModel = await InstanceSerializer.deserializeInstance(serializedData);
+reconstructedModel.Parent = Workspace;
+```
+
+### toJSON()
+
+**Signature:** `toJSON(instance: Instance): Promise<string>`
+
+Converts a given Roblox instance into a JSON string. Internally uses `serializeInstance()`.
+
+#### Parameters
+- `instance: Instance` - The instance to serialize
+
+#### Returns
+`Promise<string>` - JSON representation of the instance
+
+#### Example
+```typescript
+const jsonString = await InstanceSerializer.toJSON(part);
+print(jsonString);
+```
+
+### fromJSON()
+
+**Signature:** `fromJSON(json: string): Promise<Instance>`
+
+Converts a JSON string back into a Roblox instance. Internally uses `deserializeInstance()`.
+
+#### Parameters
+- `json: string` - The JSON string to deserialize
+
+#### Returns
+`Promise<Instance>` - The reconstructed Roblox instance
+
+#### Example
+```typescript
+const restoredPart = await InstanceSerializer.fromJSON(jsonString);
+restoredPart.Parent = Workspace;
+```
+
+## Types
+
+### SerializedInstance
+
+```typescript
+interface SerializedInstance {
+    ClassName: string;
+    Name: string;
+    Properties: { [key: string]: unknown };
+    Children: SerializedInstance[];
+    MeshId?: string;  // Only present for MeshPart instances
+}
+```
+
+This interface represents the serialized form of a Roblox instance.
+
+## Property Handling
+
+### Supported Property Types
+The serializer handles the following Roblox datatypes:
+- `Vector3`
+- `CFrame`
+- `Color3`
+- `Vector2`
+- `UDim`
+- `UDim2`
+- `NumberRange`
+- `Rect`
+- `BrickColor`
+- `NumberSequence`
+- `ColorSequence`
+- `EnumItem`
+- Primitive types (string, number, boolean)
+
+### Ignored Properties
+The following properties are automatically excluded from serialization:
+```typescript
+private static readonly IGNORED_PROPERTIES = new Set([
+    "ClassName",
+    "Name",
+    "Parent",
+    "RobloxLocked",
+    "Archivable",
+    "Mass",
+    "CenterOfMass",
+    "AssemblyCenterOfMass",
+    "ExtentsCFrame",
+    "ExtentsSize",
+    "MeshSize",
+    "ResizeIncrement",
+    "IsLoaded",
+    "TimeLength",
+    "PlaybackLoudness",
+    "CollisionFidelity",
+    "RenderFidelity",
+    "DoubleSided",
+    "WorldPosition",
+    "WorldOrientation",
+    "WorldCFrame",
+    "Active"
+]);
+```
+
+## Special Instance Handling
+
+### MeshPart
+- Automatically handles `MeshId` property
+- Uses `InsertService.CreateMeshPartAsync()` for deserialization
+- Falls back to regular instance creation if mesh creation fails
+
+### Attachments
+Special handling for attachment-specific properties:
+- CFrame
+- Position
+- Orientation
+- Rotation
+
+### ParticleEmitter
+Handles ParticleEmitter-specific properties:
+- Speed
+- SpreadAngle
+- Rate
+- RotSpeed
+- Acceleration
+- Drag
+- VelocityInheritance
+- Lifetime
+- Size
+- Transparency
+- LightEmission
+- LightInfluence
+
+## Error Handling
+
+The serializer implements several safety measures:
+
+1. **Property Access**
+   - Silently skips properties that can't be accessed
+   - Warns on deserialization failures for specific properties
+
+2. **Type Safety**
+   - Validates property types before serialization
+   - Skips invalid or unsupported types
+
+3. **MeshPart Fallback**
+   - Falls back to regular instance creation if mesh loading fails
+   - Logs warning messages for debugging
+
+## Example: Complete Workflow
+
+```typescript
+import { InstanceSerializer } from "@terradreamgames/instance-serializer";
+
+// Create a test hierarchy
+const model = new Instance("Model");
+const part = new Instance("Part", model);
+part.Position = new Vector3(0, 10, 0);
+part.Color = new Color3(1, 0, 0);
+
+// Add an attachment
+const attachment = new Instance("Attachment", part);
+attachment.Position = new Vector3(0, 1, 0);
+
+// Serialize the entire hierarchy
+const serializedData = await InstanceSerializer.serializeInstance(model);
+
+// Convert to JSON for storage
+const jsonString = HttpService.JSONEncode(serializedData);
+
+// Later: Reconstruct from JSON
+const data = HttpService.JSONDecode(jsonString) as SerializedInstance;
+const reconstructedModel = await InstanceSerializer.deserializeInstance(data);
+reconstructedModel.Parent = Workspace;
+```
+
+---
+
+> **💡 Performance Tip**  
+> For better performance with large instance hierarchies, consider serializing smaller chunks of your instances separately rather than serializing entire large models at once.

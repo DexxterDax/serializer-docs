@@ -1,0 +1,87 @@
+# Getting Started
+
+## Installation
+
+Install **InstanceSerializer** in your `roblox-ts` project:
+
+```bash
+npm i @terradreamgames/instance-serializer
+```
+
+## Configuration
+
+Since this package is not under the `@rbxts` namespace, you must configure your project to recognize it.
+
+### Update `tsconfig.json`
+
+Add the following to your `tsconfig.json`:
+
+```json
+{
+  "typeRoots": ["node_modules/@rbxts", "node_modules/@terradreamgames"]
+}
+```
+
+### Update `default.project.json`
+
+Add the following to your `default.project.json`:
+
+```json
+{
+  "rbxts_include": {
+    "$path": "include",
+    "node_modules": {
+      "$className": "Folder",
+      "@rbxts": {
+        "$path": "node_modules/@rbxts"
+      },
+      "@terradreamgames": {
+        "$path": "node_modules/@terradreamgames"
+      }
+    }
+  }
+}
+```
+
+## Usage Guide
+
+### Basic Serialization
+
+Convert Roblox instances to JSON format:
+
+```typescript
+import InstanceSerializer from "instance-serializer";
+
+// Create a test instance
+const part = new Instance("Part");
+part.Position = new Vector3(0, 10, 0);
+part.Color = new Color3(1, 0, 0);
+
+// Serialize to JSON
+const jsonString = await InstanceSerializer.toJSON(part);
+print(jsonString);
+```
+
+### Basic Deserialization
+
+Restore instances from JSON:
+
+```typescript
+// Reconstruct the instance
+const restoredPart = await InstanceSerializer.fromJSON(jsonString);
+restoredPart.Parent = Workspace;
+```
+
+## Supported Property Types
+
+The serializer handles various Roblox property types:
+
+| Type | Description |
+|------|-------------|
+| `CFrame` | Position and orientation |
+| `Vector3` | 3D coordinates |
+| `Color3` | RGB color values |
+| `BrickColor` | Named colors |
+| `Material` | Surface materials |
+
+> **Note:** Unsupported properties are automatically skipped during serialization to ensure stability.
